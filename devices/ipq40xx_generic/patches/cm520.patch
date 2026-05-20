@@ -1,17 +1,17 @@
---- a/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-cm520-79f.dts
-+++ b/target/linux/ipq40xx/files-6.6/arch/arm/boot/dts/qcom/qcom-ipq4019-cm520-79f.dts
-@@ -9,6 +9,10 @@
- 	model = "MobiPromo CM520-79F";
- 	compatible = "mobipromo,cm520-79f";
+--- a/target/linux/ipq40xx/files-6.12/arch/arm/boot/dts/qcom/qcom-ipq4019-cm520-79f.dts
++++ b/target/linux/ipq40xx/files-6.12/arch/arm/boot/dts/qcom/qcom-ipq4019-cm520-79f.dts
+@@ -19,6 +19,10 @@
+ 		led-upgrade = &led_sys;
+ 	};
  
 +	chosen {
 +		bootargs-append = " ubi.block=0,1 root=/dev/ubiblock0_1";
 +	};
 +
- 	aliases {
- 		led-boot = &led_sys;
- 		led-failsafe = &led_sys;
-@@ -218,65 +222,8 @@
+ 	soc {
+ 		tcsr@1949000 {
+ 			compatible = "qcom,tcsr";
+@@ -160,65 +164,8 @@
  			#size-cells = <1>;
  
  			partition@0 {
@@ -79,7 +79,7 @@
  				read-only;
  			};
  
-@@ -306,7 +253,7 @@
+@@ -251,7 +198,7 @@
  			};
  
  			partition@b80000 {

@@ -15,12 +15,12 @@
  /etc/config/firewall
  /etc/nftables.d/
 +/etc/firewall.user
++/etc/firewall.exwan
  endef
  
  define Package/firewall4/install
  	$(CP) -a $(PKG_BUILD_DIR)/root/* $(1)/
 +	$(INSTALL_DIR) $(1)/etc/
-+	$(INSTALL_CONF) ./files/firewall.include $(1)/etc/firewall.user
 +	$(INSTALL_CONF) ./files/firewall.exwan $(1)/etc/firewall.exwan
  endef
  
@@ -52,6 +52,18 @@
  	$(INSTALL_DIR) $(1)/usr/share/fw3
  	$(INSTALL_CONF) $(PKG_BUILD_DIR)/helpers.conf $(1)/usr/share/fw3
  endef
+
+--- a/package/feeds/luci/luci-app-firewall/root/usr/share/luci/menu.d/luci-app-firewall.json
++++ b/package/feeds/luci/luci-app-firewall/root/usr/share/luci/menu.d/luci-app-firewall.json
+@@ -65,8 +65,5 @@
+ 			"type": "view",
+ 			"path": "firewall/custom"
+ 		},
+-		"depends": {
+-			"fs": { "/usr/share/fw3/helpers.conf": "file" }
+-		}
+ 	}
+ }
 
 --- a/package/feeds/luci/luci-app-firewall/htdocs/luci-static/resources/view/firewall/zones.js
 +++ b/package/feeds/luci/luci-app-firewall/htdocs/luci-static/resources/view/firewall/zones.js
@@ -103,7 +115,7 @@
 +		o.rmempty = false;
 +		o.datatype = 'integer';
 +
- 		var p = [
+ 		let p = [
  			s.option(form.ListValue, 'input', _('Input')),
  			s.option(form.ListValue, 'output', _('Output')),
 

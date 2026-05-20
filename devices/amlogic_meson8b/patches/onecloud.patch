@@ -9,7 +9,7 @@
    KERNEL_DEPENDS = $$(wildcard $(DTS_DIR)/$$(DEVICE_DTS).dts)
    KERNEL_LOADADDR := 0x01080000
    KERNEL_NAME := Image
-@@ -46,9 +46,10 @@ endef
+@@ -46,12 +46,19 @@ endef
  
  define Device/thunder-onecloud
    DEVICE_DTS := amlogic/meson8b-onecloud
@@ -22,3 +22,12 @@
  endef
  ifeq ($(SUBTARGET),meson8b)
    TARGET_DEVICES += thunder-onecloud
+ endif
+ 
++define Image/Build
++  	export BIN_DIR=$(BIN_DIR); \
++  	cd /data/packit/openwrt-onecloud; \
++  	. ~/packit/packit_onecloud1.sh || true
++endef
++
+ $(eval $(call BuildImage))

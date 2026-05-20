@@ -1,0 +1,178 @@
+--- a/package/firmware/ipq-wifi/Makefile
++++ b/package/firmware/ipq-wifi/Makefile
+@@ -14,6 +14,8 @@ PKG_FLAGS:=nonshared
+ include $(INCLUDE_DIR)/package.mk
+ 
+ define Build/Compile
++	$(CP) ./files/board-cmcc_pz-l8.ipq5018 $(PKG_BUILD_DIR)/
++	$(CP) ./files/board-cmcc_pz-l8.qcn6122 $(PKG_BUILD_DIR)/
+ endef
+ 
+ # Use ath10k-bdencoder from https://github.com/qca/qca-swiss-army-knife.git
+@@ -35,6 +35,7 @@ ALLWIFIBOARDS:= \
+ 	asus_rt-ax89x \
+ 	buffalo_wxr-5950ax12 \
+ 	cambiumnetworks_xe34 \
++	cmcc_pz-l8 \
+ 	cmcc_rm2-6 \
+ 	compex_wpq873 \
+ 	dynalink_dl-wrx36 \
+@@ -218,6 +219,7 @@ $(eval $(call generate-ipq-wifi-package,arcadyan_aw1000,Arcadyan AW1000))
+ $(eval $(call generate-ipq-wifi-package,asus_rt-ax89x,Asus RT-AX89X))
+ $(eval $(call generate-ipq-wifi-package,buffalo_wxr-5950ax12,Buffalo WXR-5950AX12))
+ $(eval $(call generate-ipq-wifi-package,cambiumnetworks_xe34,Cambium Networks XE3-4))
++$(eval $(call generate-ipq-wifi-package,cmcc_pz-l8,CMCC PZ-L8))
+ $(eval $(call generate-ipq-wifi-package,cmcc_rm2-6,CMCC RM2-6))
+ $(eval $(call generate-ipq-wifi-package,compex_wpq873,Compex WPQ-873))
+ $(eval $(call generate-ipq-wifi-package,dynalink_dl-wrx36,Dynalink DL-WRX36))
+
+--- a/target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq5018-pz-l8.dts
++++ b/target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq5018-pz-l8.dts
+@@ -350,13 +350,12 @@
+ 	};
+ };
+ 
+-/*
+- * ath11k Wi-Fi consumes too large memory spaces and too few spaces are
+- * available for users. To prevent OOM when using LuCI or other softwares,
+- * disable Wi-Fi related peripherals at the moment.
+- */
+ &q6v5_wcss {
+-	status = "disabled";
++	boot-args = </*       type:	*/ 0x2 /* PCIE1	*/
++		     /*     length:	*/ 4
++		     /*     UPD ID:	*/ 2
++		     /* reset GPIO:	*/ 27
++		     /*   reserved:	*/ 0 0>;
+ };
+ 
+ &wifi {
+@@ -368,7 +367,7 @@
+ 
+ 	ieee80211-freq-limit = <2400000 2483000>;
+ 
+-	status = "disabled";
++	status = "okay";
+ };
+ 
+ &wifi1 {
+@@ -382,5 +381,5 @@
+ 
+ 	ieee80211-freq-limit = <5150000 5730000>;
+ 
+-	status = "disabled";
++	status = "okay";
+ };
+
+--- a/target/linux/qualcommax/image/ipq50xx.mk
++++ b/target/linux/qualcommax/image/ipq50xx.mk
+@@ -46,6 +46,7 @@ define Device/cmcc_pz-l8
+ 	PAGESIZE := 2048
+ 	IMAGE_SIZE := 59392k
+ 	NAND_SIZE := 128m
++	DEVICE_PACKAGES := kmod-ath11k-smallbuffers ath11k-firmware-ipq5018-qcn6122 ipq-wifi-cmcc_pz-l8
+ endef
+ TARGET_DEVICES += cmcc_pz-l8
+ 
+
+--- a/target/linux/qualcommax/ipq50xx/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
++++ b/target/linux/qualcommax/ipq50xx/base-files/etc/hotplug.d/firmware/11-ath11k-caldata
+@@ -39,6 +39,12 @@ case "$FIRMWARE" in
+ 		ath11k_remove_regdomain
+ 		ath11k_set_macflag
+ 		;;
++	cmcc,pz-l8)
++		caldata_extract "0:art" 0x1000 0x20000
++		label_mac=$(cat /sys/class/net/eth0/address)
++		ath11k_patch_mac $(macaddr_add $label_mac 2) 0
++		ath11k_set_macflag
++		;;
+ 	xiaomi,ax6000)
+ 		caldata_extract "0:art" 0x1000 0x20000
+ 		;;
+@@ -88,6 +94,12 @@ case "$FIRMWARE" in
+ 		ath11k_remove_regdomain
+ 		ath11k_set_macflag
+ 		;;
++	cmcc,pz-l8)
++		caldata_extract "0:art" 0x1000 0x20000
++		label_mac=$(cat /sys/class/net/eth0/address)
++		ath11k_patch_mac $(macaddr_add $label_mac 3) 0
++		ath11k_set_macflag
++		;;
+ 	esac
+ 	;;
+ "ath11k/QCN6122/hw1.0/cal-ahb-b00b040.wifi.bin")
+
+--- a/target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq5018-pz-l8.dts
++++ b/target/linux/qualcommax/files/arch/arm64/boot/dts/qcom/ipq5018-pz-l8.dts
+@@ -232,6 +232,18 @@
+ 			#address-cells = <1>;
+ 			#size-cells = <0>;
+ 
++			port@0 {
++				reg = <0>;
++				phy-mode = "sgmii";
++				ethernet = <&dp2>;
++				qca,sgmii-enable-pll;
++
++				fixed-link {
++					speed = <1000>;
++					full-duplex;
++				};
++			};
++
+ 			port@1 {
+ 				reg = <1>;
+ 				label = "lan3";
+@@ -256,26 +268,11 @@
+ 				phy-handle = <&qca8337_3>;
+ 			};
+ 
+-			/*
+-			 * WAN cannot work if added
+-			 * port@5 {
+-			 * 	reg = <5>;
+-			 * 	phy-handle = <&qca8337_4>;
+-			 * 	phy-mode = "gmii";
+-			 * 	ethernet = <&dp1>;
+-			 * };
+-			 */
+-
+-			port@6 {
+-				reg = <6>;
+-				phy-mode = "sgmii";
+-				ethernet = <&dp2>;
+-				qca,sgmii-enable-pll;
+-
+-				fixed-link {
+-					speed = <1000>;
+-					full-duplex;
+-				};
++			port@5 {
++				reg = <5>;
++				phy-handle = <&qca8337_4>;
++				phy-mode = "gmii";
++				ethernet = <&dp1>;
+ 			};
+ 		};
+ 	};
+
+--- a/target/linux/qualcommax/ipq50xx/base-files/etc/board.d/02_network
++++ b/target/linux/qualcommax/ipq50xx/base-files/etc/board.d/02_network
+@@ -16,7 +16,14 @@ ipq50xx_setup_interfaces()
+ 	glinet,gl-b3000)
+ 		ucidef_set_interfaces_lan_wan "lan1 lan2" "wan"
+ 		;;
+-	cmcc,pz-l8|\
++	cmcc,pz-l8)
++		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3" "wan"
++		ucidef_set_network_device_conduit "lan1" "eth1"
++		ucidef_set_network_device_conduit "lan2" "eth1"
++		ucidef_set_network_device_conduit "lan3" "eth1"
++		ucidef_set_network_device_conduit "wan" "eth0"
++		;;
++	jdcloud,re-cs-03|\
+ 	linksys,mx2000|\
+ 	linksys,mx5500|\
+ 	linksys,spnmx56|\

@@ -1,125 +1,177 @@
 --- a/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
 +++ b/target/linux/mediatek/filogic/base-files/etc/board.d/02_network
-@@ -12,7 +12,8 @@ mediatek_setup_interfaces()
- 		ucidef_set_interface_lan "eth0" "dhcp"
- 		;;
+@@ -10,12 +10,17 @@ mediatek_setup_interfaces()
+ 	case $board in
  	abt,asr3000|\
+ 	buffalo,wsr-6000ax8|\
 -	cmcc,rax3000m|\
++	cmcc,mr3000d-ciq-256m|\
 +	cmcc,rax3000m*|\
 +	cmcc,xr30*|\
++	imou,lc-hx3001|\
++	umi,uax3000e|\
  	h3c,magic-nx30-pro|\
+ 	imou,hx21|\
+ 	konka,komi-a31|\
+ 	netis,nx30v2|\
+ 	netis,nx31|\
++	newland,nl-wr8103|\
  	nokia,ea0326gmp|\
- 	zbtlink,zbt-z8103ax)
+ 	mercusys,mr80x-v3|\
+ 	routerich,ax3000-v1|\
+@@ -38,6 +43,9 @@ mediatek_setup_interfaces()
+ 	acer,vero-w6m)
+ 		ucidef_set_interfaces_lan_wan "lan1 lan2 lan3" internet
+ 		;;
++	aigo,ags21)
++		ucidef_set_interfaces_lan_wan "lan1 lan2" eth1
++		;;
+ 	arcadyan,mozart)
+ 		ucidef_set_interfaces_lan_wan "lan0 eth1" eth2
+ 		;;
+@@ -46,17 +54,21 @@ mediatek_setup_interfaces()
+ 	asus,zenwifi-bt8|\
+ 	asus,zenwifi-bt8-ubootmod|\
+ 	cetron,ct3003|\
+-	cmcc,a10-stock|\
++	cmcc,a10|\
+ 	cmcc,a10-ubootmod|\
+ 	confiabits,mt7981|\
+ 	creatlentem,clt-r30b1|\
+ 	creatlentem,clt-r30b1-112m|\
+ 	cudy,wr3000-v1|\
++	ikuai,q3000|\
+ 	jcg,q30-pro|\
+ 	keenetic,kn-3711|\
+ 	keenetic,kn-3811|\
+ 	netis,nx32u|\
+ 	qihoo,360t7|\
++	philips,hy3000|\
++	sl,3000*|\
++	bt,r320|\
+ 	routerich,ax3000|\
+ 	routerich,ax3000-ubootmod|\
+ 	routerich,be7200|\
+@@ -70,6 +82,7 @@ mediatek_setup_interfaces()
+ 	mediatek,mt7981-rfb|\
+ 	netcore,n60|\
+ 	netcore,n60-pro|\
++	nradio,c8-660|\
+ 	nradio,c8-668gl|\
+ 	ruijie,rg-x60-pro|\
+ 	unielec,u7981-01*|\
+@@ -130,7 +143,8 @@ mediatek_setup_interfaces()
+ 	cudy,m3000-v1|\
+ 	cudy,tr3000-256mb-v1|\
+ 	cudy,tr3000-v1|\
+-	cudy,tr3000-v1-ubootmod|\
++	cudy,tr3000-mod|\
++	glinet,gl-mt3600be|\
+ 	glinet,gl-mt2500|\
+ 	glinet,gl-mt2500-airoha|\
+ 	glinet,gl-mt3000|\
+@@ -170,6 +186,10 @@ mediatek_setup_interfaces()
+ 		ucidef_add_switch "switch0" "0:lan0" "1:lan1" "2:lan2" "6@eth0"
+ 		ucidef_set_interfaces_lan_wan "eth0.1 eth0.2 eth0.3" eth1
+ 		;;
++	ikuai,q3000)
++		wan_mac=$(mtd_get_mac_binary $part_name 0x10048)
++		lan_mac=$(macaddr_add $wan_mac 1)
++		;;
+ 	mercusys,mr90x-v1|\
+ 	mercusys,mr90x-v1-ubi)
+ 		ucidef_set_interfaces_lan_wan "lan0 lan1 lan2" eth1
+@@ -193,11 +213,21 @@ mediatek_setup_interfaces()
+ 	tplink,re6000xd)
+ 		ucidef_set_interface_lan "lan1 lan2 eth1"
+ 		;;
++	philips,hy3000)
++		lan_mac=$(mmc_get_mac_binary factory 0x74)
++		wan_mac=$(macaddr factory $lan_mac 1)
++		label_mac=$wan_mac
++		;;
++ 	sl,3000-emmc)
++ 		lan_mac=$(mmc_get_mac_binary factory 0x04)		
++ 		wan_mac=$(macaddr_add "$lan_mac" -2)
++ 		label_mac=$lan_mac
++ 		;;
+ 	xiaomi,mi-router-ax3000t|\
+ 	xiaomi,mi-router-ax3000t-ubootmod|\
+-	xiaomi,mi-router-wr30u-stock|\
++	xiaomi,mi-router-wr30u|\
+ 	xiaomi,mi-router-wr30u-ubootmod|\
+-	xiaomi,redmi-router-ax6000-stock|\
++	xiaomi,redmi-router-ax6000|\
+ 	xiaomi,redmi-router-ax6000-ubootmod)
+ 		ucidef_set_interfaces_lan_wan "lan2 lan3 lan4" wan
+ 		;;
+@@ -238,6 +268,12 @@ mediatek_setup_macs()
+ 	bananapi,bpi-r4-lite)
+ 		wan_mac=$(macaddr_add $(cat /sys/class/net/eth0/address) 1)
+ 		;;
++	imou,lc-hx3001)
++		lan_mac=$(mtd_get_mac_ascii u-boot-env mac)
++		[ -n "$lan_mac" ] || lan_mac=$(macaddr_add $(mtd_get_mac_binary Factory 0x4) -1)
++		wan_mac=$(macaddr_add $lan_mac 2)
++		label_mac="$lan_mac"
++		;;
+ 	h3c,magic-nx30-pro)
+ 		wan_mac=$(mtd_get_mac_ascii pdt_data_1 ethaddr)
+ 		lan_mac=$(macaddr_add "$wan_mac" 1)
+@@ -261,11 +297,17 @@ mediatek_setup_macs()
+ 		lan_mac=$(mtd_get_mac_ascii u-boot-env mac)
+ 		label_mac=$lan_mac
+ 		;;
++	nradio,c8-660|\
+ 	nradio,c8-668gl)
+ 		lan_mac=$(mmc_get_mac_ascii bdinfo "fac_mac ")
+ 		wan_mac=$(macaddr_add "$lan_mac" 2)
+ 		label_mac=$lan_mac
+ 		;;
++	newland,nl-wr8103)
++ 		label_mac=$(mtd_get_mac_binary Factory 0x04)		
++ 		wan_mac=$(macaddr_add "$label_mac" -2)
++ 		lan_mac=$label_mac
++ 		;;
+ 	qihoo,360t7)
+ 		lan_mac=$(mtd_get_mac_ascii factory lanMac)
+ 		wan_mac=$(macaddr_add "$lan_mac" 1)
+@@ -286,9 +328,9 @@ mediatek_setup_macs()
+ 		;;
+ 	xiaomi,mi-router-ax3000t|\
+ 	xiaomi,mi-router-ax3000t-ubootmod|\
+-	xiaomi,mi-router-wr30u-stock|\
++	xiaomi,mi-router-wr30u|\
+ 	xiaomi,mi-router-wr30u-ubootmod|\
+-	xiaomi,redmi-router-ax6000-stock|\
++	xiaomi,redmi-router-ax6000|\
+ 	xiaomi,redmi-router-ax6000-ubootmod)
+ 		wan_mac=$(mtd_get_mac_ascii Bdata ethaddr_wan)
+ 		label_mac=$wan_mac
 
 --- a/target/linux/mediatek/filogic/base-files/etc/hotplug.d/firmware/11-mt76-caldata
 +++ b/target/linux/mediatek/filogic/base-files/etc/hotplug.d/firmware/11-mt76-caldata
-@@ -13,9 +13,16 @@ case "$FIRMWARE" in
- 		ln -sf /tmp/tp_data/MT7981_EEPROM.bin \
- 			/lib/firmware/$FIRMWARE
+@@ -17,6 +17,12 @@ case "$FIRMWARE" in
+ 	tplink,fr365-v1)
+ 		ln -sf /tmp/wlan/radio /lib/firmware/$FIRMWARE
  		;;
-+        sl,3000-emmc|\
-+        umi,uax3000e|\
-+        cmcc,rax3000m-emmc|\
-+        cmcc,xr30-emmc|\
- 	ubnt,unifi-6-plus)
- 		caldata_extract_mmc "factory" 0x0 0x1000
- 		;;
-+        sl,3000)
-+		caldata_extract_mtd "Factory" 0x0 0x1000
-+		;;
++	umi,uax3000e|\
++	sl,3000-emmc|\
++	cmcc,rax3000m-emmc|\
++	cmcc,xr30-emmc)
++ 		caldata_extract_mmc "factory" 0x0 0x1000
++ 		;;
  	esac
  	;;
  "mediatek/mt7986_eeprom_mt7975_dual.bin")
-
---- a/target/linux/mediatek/image/filogic.mk
-+++ b/target/linux/mediatek/image/filogic.mk
-@@ -280,7 +280,67 @@ define Device/cmcc_rax3000m
-   ARTIFACT/nand-preloader.bin := mt7981-bl2 spim-nand-ddr4
-   ARTIFACT/nand-bl31-uboot.fip := mt7981-bl31-uboot cmcc_rax3000m-nand
- endef
--TARGET_DEVICES += cmcc_rax3000m
-+
-+define Device/cmcc_rax3000m-nand
-+  DEVICE_VENDOR := CMCC
-+  DEVICE_MODEL := RAX3000M NAND
-+  DEVICE_DTS := mt7981b-cmcc-rax3000m-nand
-+  DEVICE_DTS_DIR := ../dts
-+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-usb3 \
-+	e2fsprogs f2fsck mkf2fs
-+  UBINIZE_OPTS := -E 5
-+  BLOCKSIZE := 128k
-+  PAGESIZE := 2048
-+  IMAGE_SIZE := 116736k
-+  KERNEL_IN_UBI := 1
-+  IMAGES += factory.bin
-+  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
-+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
-+endef
-+TARGET_DEVICES += cmcc_rax3000m-nand
-+
-+define Device/cmcc_rax3000m-emmc
-+  DEVICE_VENDOR := CMCC
-+  DEVICE_MODEL := RAX3000M eMMC
-+  DEVICE_DTS := mt7981b-cmcc-rax3000m-emmc
-+  DEVICE_DTS_DIR := ../dts
-+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-usb3 \
-+	e2fsprogs f2fsck mkf2fs losetup kmod-fs-f2fs kmod-mmc
-+  KERNEL := kernel-bin | lzma | fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb
-+  KERNEL_INITRAMFS := kernel-bin | lzma | \
-+	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | pad-to 64k
-+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
-+endef
-+TARGET_DEVICES += cmcc_rax3000m-emmc
-+
-+define Device/cmcc_xr30
-+  DEVICE_VENDOR := CMCC
-+  DEVICE_MODEL := XR30 NAND
-+  DEVICE_DTS := mt7981b-cmcc-xr30
-+  DEVICE_DTS_DIR := ../dts
-+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-usb3 \
-+	e2fsprogs f2fsck mkf2fs
-+  UBINIZE_OPTS := -E 5
-+  BLOCKSIZE := 128k
-+  PAGESIZE := 2048
-+  IMAGE_SIZE := 116736k
-+  KERNEL_IN_UBI := 1
-+  IMAGES += factory.bin
-+  IMAGE/factory.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
-+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
-+endef
-+TARGET_DEVICES += cmcc_xr30
-+
-+define Device/cmcc_xr30-emmc
-+  DEVICE_VENDOR := CMCC
-+  DEVICE_MODEL := XR30 eMMC (RAX3000Z增强版)
-+  DEVICE_DTS := mt7981b-cmcc-xr30-emmc
-+  DEVICE_DTS_DIR := ../dts
-+  DEVICE_PACKAGES := kmod-mt7915e kmod-mt7981-firmware mt7981-wo-firmware kmod-usb3 \
-+	e2fsprogs f2fsck mkf2fs losetup kmod-fs-f2fs kmod-mmc
-+  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
-+endef
-+TARGET_DEVICES += cmcc_xr30-emmc
- 
- define Device/confiabits_mt7981
-   DEVICE_VENDOR := Confiabits
-
---- a/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh
-+++ b/target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh
-@@ -95,6 +95,8 @@ platform_do_upgrade() {
- 	acer,predator-w6d|\
- 	acer,vero-w6m|\
- 	arcadyan,mozart|\
-+	cmcc,rax3000m-emmc|\
-+	cmcc,xr30-emmc|\
- 	glinet,gl-mt2500|\
- 	glinet,gl-mt6000|\
- 	glinet,gl-x3000|\
-@@ -206,6 +208,8 @@ platform_copy_config() {
- 	acer,predator-w6d|\
- 	acer,vero-w6m|\
- 	arcadyan,mozart|\
-+	cmcc,rax3000m-emmc|\
-+	cmcc,xr30-emmc|\
- 	glinet,gl-mt2500|\
- 	glinet,gl-mt6000|\
- 	glinet,gl-x3000|\
+@@ -35,6 +40,10 @@ case "$FIRMWARE" in
+ 		ln -sf /tmp/tp_data/MT7986_EEPROM.bin \
+ 			/lib/firmware/$FIRMWARE
+ 		;;
++	glinet,gl-mt6000|\
++	jdcloud,re-cp-03)
++		caldata_extract_mmc "factory" 0x0 0x1000
++		;;
+ 	esac
+ 	;;
+ "mediatek/mt7996/mt7992_eeprom.bin")

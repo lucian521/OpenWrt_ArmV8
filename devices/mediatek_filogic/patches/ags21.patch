@@ -1,0 +1,44 @@
+--- a/package/boot/uboot-tools/uboot-envtools/files/mediatek_filogic
++++ b/package/boot/uboot-tools/uboot-envtools/files/mediatek_filogic
+@@ -58,13 +58,15 @@ zyxel,ex5601-t0-ubootmod)
+ acer,predator-w6|\
+ acer,predator-w6d|\
+ acer,vero-w6m|\
++aigo,ags21|\
+ glinet,gl-mt2500|\
+ glinet,gl-mt2500-airoha|\
+ glinet,gl-mt6000|\
+ glinet,gl-x3000|\
+ glinet,gl-xe3000|\
+ huasifei,wh3000|\
+-nradio,c8-668gl)
++nradio,c8-668gl|\
++umi,uax3000e)
+ 	ubootenv_add_mmc "u-boot-env" "" "0x0" "0x80000"
+ 	;;
+ asiarf,ap7986-003|\
+@@ -84,6 +86,7 @@ bananapi,bpi-r3-mini|\
+ bananapi,bpi-r4|\
+ bananapi,bpi-r4-lite|\
+ bananapi,bpi-r4-poe|\
++bt,r320|\
+ cmcc,rax3000m|\
+ jdcloud,re-cp-03)
+ 	. /lib/upgrade/fit.sh
+@@ -146,11 +149,14 @@ ubnt,unifi-6-plus)
+ 	ubootenv_add_uci_config "/dev/mtd1" "0x0" "0x80000" "0x10000"
+ 	;;
+ xiaomi,mi-router-ax3000t|\
+-xiaomi,mi-router-wr30u-stock|\
+-xiaomi,redmi-router-ax6000-stock)
++xiaomi,mi-router-wr30u|\
++xiaomi,redmi-router-ax6000)
+ 	ubootenv_add_uci_config "/dev/mtd1" "0x0" "0x10000" "0x20000"
+ 	ubootenv_add_uci_sys_config "/dev/mtd2" "0x0" "0x10000" "0x20000"
+ 	;;
++cmcc,mr3000d-ciq-256m)
++	ubootenv_add_uci_config "/dev/mtd1" "0" "0x20000" "0x20000" 1
++	;;
+ zyxel,ex5601-t0)
+ 	ubootenv_add_mtd "u-boot-env" "0x0" "0x20000" "0x40000" "2"
+ 	;;

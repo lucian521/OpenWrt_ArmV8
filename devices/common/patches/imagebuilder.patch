@@ -90,7 +90,7 @@
 
 --- a/target/imagebuilder/files/Makefile
 +++ b/target/imagebuilder/files/Makefile
-@@ -148,6 +148,33 @@ BUILD_PACKAGES:=$(sort $(DEFAULT_PACKAGES) $($(USER_PROFILE)_PACKAGES) kernel)
+@@ -144,6 +144,33 @@ BUILD_PACKAGES:=$(sort $(DEFAULT_PACKAGES) $($(USER_PROFILE)_PACKAGES) kernel)
  # "-pkgname" in the package list means remove "pkgname" from the package list
  BUILD_PACKAGES:=$(filter-out $(filter -%,$(BUILD_PACKAGES)) $(patsubst -%,%,$(filter -%,$(BUILD_PACKAGES))),$(BUILD_PACKAGES))
  BUILD_PACKAGES:=$(USER_PACKAGES) $(BUILD_PACKAGES)
@@ -122,9 +122,9 @@
 +$(eval BUILD_PACKAGES += $(foreach pkg,$(BUILD_PACKAGES),$(if $(and $(filter luci-app-%,$(pkg)),$(shell $(OPKG) list | grep -q "^luci-i18n-$(patsubst luci-app-%,%,$(pkg))-zh-cn" && echo 1)),luci-i18n-$(patsubst luci-app-%,%,$(pkg))-zh-cn)))
 +endef
  BUILD_PACKAGES:=$(filter-out $(filter -%,$(BUILD_PACKAGES)) $(patsubst -%,%,$(filter -%,$(BUILD_PACKAGES))),$(BUILD_PACKAGES))
- PACKAGES:=
  
-@@ -162,7 +189,10 @@ _call_image: staging_dir/host/.prereq-build
+ ifneq ($(CONFIG_USE_APK),)
+@@ -184,7 +211,10 @@ _call_image: staging_dir/host/.prereq-build
  	$(MAKE) -s prepare_rootfs
  	$(MAKE) -s build_image
  	$(MAKE) -s json_overview_image_info
@@ -135,13 +135,13 @@
  
  _call_manifest: FORCE
  	rm -rf $(TARGET_DIR)
-@@ -230,9 +260,17 @@ package_install: FORCE
+@@ -251,9 +281,17 @@ package_install: FORCE
  	@echo
  	@echo Installing packages...
  ifeq ($(CONFIG_USE_APK),)
 +	$(eval $(call add_zh_cn_packages))
- 	$(OPKG) install $(firstword $(wildcard $(LINUX_DIR)/libc_*.ipk $(PACKAGE_DIR)/libc_*.ipk))
- 	$(OPKG) install $(firstword $(wildcard $(LINUX_DIR)/kernel_*.ipk $(PACKAGE_DIR)/kernel_*.ipk))
+ 	$(OPKG) install $(wildcard $(PACKAGE_DIR)/libc_*.ipk)
+ 	$(OPKG) install $(wildcard $(PACKAGE_DIR)/kernel_*.ipk)
 -	$(OPKG) install $(BUILD_PACKAGES)
 +	$(OPKG) install --force-maintainer $(BUILD_PACKAGES) luci-i18n-base-zh-cn || true
 +	$(if $(USER_FILES), \
@@ -152,9 +152,9 @@
 +	)
 +	$(OPKG) install --force-maintainer --force-reinstall my-default-settings 2>/dev/null
  else
- 	$(APK) add --no-scripts $(firstword $(wildcard $(LINUX_DIR)/libc-*.apk $(PACKAGE_DIR)/libc-*.apk))
- 	$(APK) add --no-scripts $(firstword $(wildcard $(LINUX_DIR)/kernel-*.apk $(PACKAGE_DIR)/kernel-*.apk))
-@@ -260,16 +298,19 @@ else
+ 	$(eval BUILD_PACKAGES:=$(call FormatPackages,$(BUILD_PACKAGES)))
+ 	$(APK) add --arch $(ARCH_PACKAGES) --no-scripts $(BUILD_PACKAGES)
+@@ -280,16 +318,19 @@ else
  	)
  endif
  	$(call prepare_rootfs,$(TARGET_DIR),$(USER_FILES),$(DISABLED_SERVICES))

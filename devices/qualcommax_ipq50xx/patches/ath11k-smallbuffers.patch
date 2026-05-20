@@ -1,0 +1,141 @@
+From 2858400d263dae0d476f88a7cb7c4540eeb7783f Mon Sep 17 00:00:00 2001
+From: Ziyang Huang <hzyitc@outlook.com>
+Date: Fri, 9 Jan 2026 23:15:13 +0800
+Subject: [PATCH] mac80211: ath11k: provide smallbuffers variant
+
+Signed-off-by: Ziyang Huang <hzyitc@outlook.com>
+---
+ package/kernel/mac80211/Makefile              |  1 +
+ package/kernel/mac80211/ath.mk                | 23 ++++++++--
+ ...introduct-CONFIG_ATH11K_SMALLBUFFERS.patch | 43 +++++++++++++++++++
+ 3 files changed, 63 insertions(+), 4 deletions(-)
+ create mode 100644 package/kernel/mac80211/patches/ath11k/951-wifi-ath11k-introduct-CONFIG_ATH11K_SMALLBUFFERS.patch
+
+diff --git a/package/kernel/mac80211/Makefile b/package/kernel/mac80211/Makefile
+index 0beb264db16c38..864b0af8a6cebf 100644
+--- a/package/kernel/mac80211/Makefile
++++ b/package/kernel/mac80211/Makefile
+@@ -280,6 +280,7 @@ C_DEFINES=
+ 
+ ifeq ($(BUILD_VARIANT),smallbuffers)
+ 	C_DEFINES+= -DCONFIG_ATH10K_SMALLBUFFERS
++	C_DEFINES+= -DCONFIG_ATH11K_SMALLBUFFERS
+ endif
+ 
+ MAKE_OPTS:= \
+diff --git a/package/kernel/mac80211/ath.mk b/package/kernel/mac80211/ath.mk
+index 9adb8914cd5829..e87cef5600e75b 100644
+--- a/package/kernel/mac80211/ath.mk
++++ b/package/kernel/mac80211/ath.mk
+@@ -1,6 +1,6 @@
+ PKG_DRIVERS += \
+ 	ath ath5k ath6kl ath6kl-sdio ath6kl-usb ath9k ath9k-common ath9k-htc ath10k ath10k-smallbuffers \
+-	ath11k ath11k-ahb ath11k-pci ath12k carl9170 owl-loader ar5523 wil6210 qcom-qmi-helpers
++	ath11k ath11k-smallbuffers ath11k-ahb ath11k-pci ath12k carl9170 owl-loader ar5523 wil6210 qcom-qmi-helpers
+ 
+ PKG_CONFIG_DEPENDS += \
+ 	CONFIG_PACKAGE_ATH_DEBUG \
+@@ -65,7 +65,8 @@ config-$(CONFIG_ATH12K_THERMAL) += ATH12K_THERMAL
+ config-$(call config_package,ath9k-htc) += ATH9K_HTC
+ config-$(call config_package,ath10k,regular) += ATH10K ATH10K_PCI
+ config-$(call config_package,ath10k-smallbuffers,smallbuffers) += ATH10K ATH10K_PCI ATH10K_SMALLBUFFERS
+-config-$(call config_package,ath11k) += ATH11K
++config-$(call config_package,ath11k,regular) += ATH11K
++config-$(call config_package,ath11k-smallbuffers,smallbuffers) += ATH11K ATH11K_SMALLBUFFERS
+ config-$(call config_package,ath11k-ahb) += ATH11K_AHB
+ config-$(call config_package,ath11k-pci) += ATH11K_PCI
+ config-$(call config_package,ath12k) += ATH12K
+@@ -312,16 +313,24 @@ define KernelPackage/ath10k-smallbuffers
+   PROVIDES:=@kmod-ath10k-any
+ endef
+ 
+-define KernelPackage/ath11k
++define KernelPackage/ath11k/Default
+   $(call KernelPackage/mac80211/Default)
+   TITLE:=Qualcomm 802.11ax wireless chipset support (common code)
+   URL:=https://wireless.wiki.kernel.org/en/users/drivers/ath11k
+   DEPENDS+= +kmod-ath +@DRIVER_11AC_SUPPORT +@DRIVER_11AX_SUPPORT \
+   +kmod-crypto-michael-mic +ATH11K_THERMAL:kmod-hwmon-core \
+   +ATH11K_THERMAL:kmod-thermal +kmod-qcom-qmi-helpers
++  PROVIDES:=kmod-ath11k
+   FILES:=$(PKG_BUILD_DIR)/drivers/net/wireless/ath/ath11k/ath11k.ko
+ endef
+ 
++define KernelPackage/ath11k
++  $(call KernelPackage/ath11k/Default)
++  VARIANT:=regular
++  DEFAULT_VARIANT:=1
++  CONFLICTS:=kmod-ath11k-smallbuffers
++endef
++
+ define KernelPackage/ath11k/description
+ This module adds support for Qualcomm Technologies 802.11ax family of
+ chipsets.
+@@ -331,11 +340,17 @@ define KernelPackage/ath11k/config
+ 
+        config ATH11K_THERMAL
+                bool "Enable thermal sensors and throttling support"
+-               depends on PACKAGE_kmod-ath11k
++               depends on PACKAGE_kmod-ath11k || PACKAGE_kmod-ath11k-smallbuffers
+                default y if TARGET_qualcommax
+ 
+ endef
+ 
++define KernelPackage/ath11k-smallbuffers
++  $(call KernelPackage/ath11k/Default)
++  TITLE+= (small buffers for low-RAM devices)
++  VARIANT:=smallbuffers
++endef
++
+ define KernelPackage/ath11k-ahb
+   $(call KernelPackage/mac80211/Default)
+   TITLE:=Qualcomm 802.11ax AHB wireless chipset support
+diff --git a/package/kernel/mac80211/patches/ath11k/951-wifi-ath11k-introduct-CONFIG_ATH11K_SMALLBUFFERS.patch b/package/kernel/mac80211/patches/ath11k/951-wifi-ath11k-introduct-CONFIG_ATH11K_SMALLBUFFERS.patch
+new file mode 100644
+index 00000000000000..aa56ac0600f370
+--- /dev/null
++++ b/package/kernel/mac80211/patches/ath11k/951-wifi-ath11k-introduct-CONFIG_ATH11K_SMALLBUFFERS.patch
+@@ -0,0 +1,43 @@
++From 4032fbc94b8cde0ff761b6dd6a278420e6f052b4 Mon Sep 17 00:00:00 2001
++From: Ziyang Huang <hzyitc@outlook.com>
++Date: Sun, 8 Sep 2024 16:52:04 +0800
++Subject: [PATCH 1/1] wifi: ath11k: introduct CONFIG_ATH11K_SMALLBUFFERS
++
++Signed-off-by: Ziyang Huang <hzyitc@outlook.com>
++---
++ drivers/net/wireless/ath/ath11k/dp.h | 10 +++++-----
++ 1 file changed, 5 insertions(+), 5 deletions(-)
++
++diff --git a/drivers/net/wireless/ath/ath11k/dp.h b/drivers/net/wireless/ath/ath11k/dp.h
++index 7a55afd33be8..d3d3b2aa800c 100644
++--- a/drivers/net/wireless/ath/ath11k/dp.h
+++++ b/drivers/net/wireless/ath/ath11k/dp.h
++@@ -206,7 +206,7 @@ struct ath11k_pdev_dp {
++ #define DP_WBM_RELEASE_RING_SIZE	64
++ #define DP_TCL_DATA_RING_SIZE		512
++ #define DP_TCL_DATA_RING_SIZE_WCN6750	2048
++-#define DP_TX_COMP_RING_SIZE		32768
+++#define DP_TX_COMP_RING_SIZE		(!IS_ENABLED(CONFIG_ATH11K_SMALLBUFFERS) ? 32768 : 2048)
++ #define DP_TX_IDR_SIZE			DP_TX_COMP_RING_SIZE
++ #define DP_TCL_CMD_RING_SIZE		32
++ #define DP_TCL_STATUS_RING_SIZE		32
++@@ -217,12 +217,12 @@ struct ath11k_pdev_dp {
++ #define DP_REO_EXCEPTION_RING_SIZE	128
++ #define DP_REO_CMD_RING_SIZE		256
++ #define DP_REO_STATUS_RING_SIZE		2048
++-#define DP_RXDMA_BUF_RING_SIZE		4096
+++#define DP_RXDMA_BUF_RING_SIZE		(!IS_ENABLED(CONFIG_ATH11K_SMALLBUFFERS) ? 4096 : 1024)
++ #define DP_RXDMA_REFILL_RING_SIZE	2048
++ #define DP_RXDMA_ERR_DST_RING_SIZE	1024
++-#define DP_RXDMA_MON_STATUS_RING_SIZE	1024
++-#define DP_RXDMA_MONITOR_BUF_RING_SIZE	4096
++-#define DP_RXDMA_MONITOR_DST_RING_SIZE	2048
+++#define DP_RXDMA_MON_STATUS_RING_SIZE	(!IS_ENABLED(CONFIG_ATH11K_SMALLBUFFERS) ? 1024 : 512)
+++#define DP_RXDMA_MONITOR_BUF_RING_SIZE	(!IS_ENABLED(CONFIG_ATH11K_SMALLBUFFERS) ? 4096 : 128)
+++#define DP_RXDMA_MONITOR_DST_RING_SIZE	(!IS_ENABLED(CONFIG_ATH11K_SMALLBUFFERS) ? 2048 : 128)
++ #define DP_RXDMA_MONITOR_DESC_RING_SIZE	4096
++ 
++ #define DP_RX_RELEASE_RING_NUM	3
++-- 
++2.40.1
++
