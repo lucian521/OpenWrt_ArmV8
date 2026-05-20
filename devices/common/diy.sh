@@ -11,6 +11,8 @@ sed -i '/	refresh_config();/d' scripts/feeds
 
 sed -i "s?git.openwrt.org/\(project\|feed\)?github.com/openwrt?g" feeds.conf.default
 
+# 修复 kiddin9 luci-base 缺失 NOTICE 文件的 bug
+mkdir -p package/feeds/kiddin9/luci-base/../ && touch package/feeds/kiddin9/NOTICE
 ./scripts/feeds update -a
 ./scripts/feeds install -a -p kiddin9 -f
 ./scripts/feeds install -a
